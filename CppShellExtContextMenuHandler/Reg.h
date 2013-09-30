@@ -52,8 +52,7 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 //      }
 //   }
 //
-HRESULT RegisterInprocServer(PCWSTR pszModule, const CLSID& clsid, 
-    PCWSTR pszFriendlyName, PCWSTR pszThreadModel);
+HRESULT RegisterInprocServer(PCWSTR pszModule, const CLSID& clsid,  PCWSTR pszFriendlyName, PCWSTR pszThreadModel);
 
 
 //
@@ -75,30 +74,10 @@ HRESULT UnregisterInprocServer(const CLSID& clsid);
 //   PURPOSE: Register the context menu handler.
 //
 //   PARAMETERS:
-//   * pszFileType - The file type that the context menu handler is 
-//     associated with. For example, '*' means all file types; '.txt' means 
-//     all .txt files. The parameter must not be NULL.
 //   * clsid - Class ID of the component
 //   * pszFriendlyName - Friendly name
 //
-//   NOTE: The function creates the following key in the registry.
-//
-//   HKCR
-//   {
-//      NoRemove <File Type>
-//      {
-//          NoRemove shellex
-//          {
-//              NoRemove ContextMenuHandlers
-//              {
-//                  {<CLSID>} = s '<Friendly Name>'
-//              }
-//          }
-//      }
-//   }
-//
-HRESULT RegisterShellExtContextMenuHandler(
-    PCWSTR pszFileType, const CLSID& clsid, PCWSTR pszFriendlyName);
+HRESULT RegisterShellExtContextMenuHandler(const CLSID& clsid, PCWSTR pszFriendlyName);
 
 
 //
@@ -107,13 +86,9 @@ HRESULT RegisterShellExtContextMenuHandler(
 //   PURPOSE: Unregister the context menu handler.
 //
 //   PARAMETERS:
-//   * pszFileType - The file type that the context menu handler is 
-//     associated with. For example, '*' means all file types; '.txt' means 
-//     all .txt files. The parameter must not be NULL.
 //   * clsid - Class ID of the component
 //
 //   NOTE: The function removes the {<CLSID>} key under 
 //   HKCR\<File Type>\shellex\ContextMenuHandlers in the registry.
 //
-HRESULT UnregisterShellExtContextMenuHandler(
-    PCWSTR pszFileType, const CLSID& clsid);
+HRESULT UnregisterShellExtContextMenuHandler(const CLSID& clsid);

@@ -31,18 +31,12 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <Guiddef.h>
 #include "ClassFactory.h"           // For the class factory
 #include "Reg.h"
+#include "Log.h"
 
-
-// {BFD98515-CD74-48A4-98E2-13D209E3EE4F}
-// When you write your own handler, you must create a new CLSID by using the 
-// "Create GUID" tool in the Tools menu, and specify the CLSID value here.
-const CLSID CLSID_FileContextMenuExt = 
-{ 0xBFD98515, 0xCD74, 0x48A4, { 0x98, 0xE2, 0x13, 0xD2, 0x09, 0xE3, 0xEE, 0x4F } };
-
+const CLSID CLSID_FileContextMenuExt = { 0x77ad0798, 0x84a3, 0x4e7a, { 0x93, 0xed, 0xf7, 0x05, 0xcd, 0xef, 0xc6, 0xa3 } };
 
 HINSTANCE   g_hInst     = NULL;
 long        g_cDllRef   = 0;
-
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
@@ -128,18 +122,15 @@ STDAPI DllRegisterServer(void)
     }
 
     // Register the component.
-    hr = RegisterInprocServer(szModule, CLSID_FileContextMenuExt, 
-        L"CppShellExtContextMenuHandler.FileContextMenuExt Class", 
-        L"Apartment");
+    hr = RegisterInprocServer(szModule, CLSID_FileContextMenuExt, L"RoboPasteContextMenuHandler.FileContextMenuExt Class", L"Apartment");
     if (SUCCEEDED(hr))
     {
         // Register the context menu handler. The context menu handler is 
         // associated with the .cpp file class.
-        hr = RegisterShellExtContextMenuHandler(L".cpp", 
-            CLSID_FileContextMenuExt, 
-            L"CppShellExtContextMenuHandler.FileContextMenuExt");
+        hr = RegisterShellExtContextMenuHandler(CLSID_FileContextMenuExt, L"RoboPasteContextMenuHandler.FileContextMenuExt");
+		MessageBox(NULL, L"Registered!\n", L"RoboPaste", MB_ICONEXCLAMATION);
+		Log(L"Registered!\n");
     }
-
     return hr;
 }
 
@@ -151,22 +142,12 @@ STDAPI DllRegisterServer(void)
 // 
 STDAPI DllUnregisterServer(void)
 {
-    HRESULT hr = S_OK;
-
-    wchar_t szModule[MAX_PATH];
-    if (GetModuleFileName(g_hInst, szModule, ARRAYSIZE(szModule)) == 0)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        return hr;
-    }
-
-    // Unregister the component.
-    hr = UnregisterInprocServer(CLSID_FileContextMenuExt);
+    HRESULT hr = UnregisterInprocServer(CLSID_FileContextMenuExt);
     if (SUCCEEDED(hr))
     {
-        // Unregister the context menu handler.
-        hr = UnregisterShellExtContextMenuHandler(L".cpp", 
-            CLSID_FileContextMenuExt);
+        hr = UnregisterShellExtContextMenuHandler(CLSID_FileContextMenuExt);
+		Log(L"Unregistered!\n");
+		MessageBox(NULL, L"Unregistered!\n", L"RoboPaste", MB_ICONEXCLAMATION);
     }
 
     return hr;

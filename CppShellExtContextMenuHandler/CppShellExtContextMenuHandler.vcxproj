@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="ClassFactory.h" />
     <ClInclude Include="FileContextMenuExt.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="Reg.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -182,6 +183,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FileContextMenuExt.cpp" />
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="Reg.cpp" />
   </ItemGroup>
   <ItemGroup>
