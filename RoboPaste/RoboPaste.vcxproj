@@ -184,7 +184,7 @@
     <ClCompile Include="Reg.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="CppShellExtContextMenuHandler.rc" />
+    <ResourceCompile Include="RoboPaste.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

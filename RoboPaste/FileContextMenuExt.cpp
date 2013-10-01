@@ -215,7 +215,7 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 			{
 				// loop through all files scanned from the clipboard when the menu was shown
 				bool error = false;
-				for(int fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
+				for(size_t fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
 				{
 					// get file attributes
 					std::wstring inputFilename = mFiles[fileIndex];
