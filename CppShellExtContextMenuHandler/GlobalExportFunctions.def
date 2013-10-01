@@ -1,4 +1,4 @@
-LIBRARY	"CppShellExtContextMenuHandler"
+LIBRARY	"RoboPaste"
 EXPORTS
     DllGetClassObject   PRIVATE
     DllCanUnloadNow     PRIVATE
