@@ -1,24 +1,13 @@
-/****************************** Module Header ******************************\
-Module Name:  ClassFactory.h
-Project:      CppShellExtContextMenuHandler
-Copyright (c) Microsoft Corporation.
-
-The file declares the class factory for the FileContextMenuExt COM class. 
-
-This source is subject to the Microsoft Public License.
-See http://www.microsoft.com/opensource/licenses.mspx#Ms-PL.
-All other rights reserved.
-
-THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
-\***************************************************************************/
+//////////////////////////////////////////////////////////////////////
 
 #pragma once
 
-#include <unknwn.h>     // For IClassFactory
+//////////////////////////////////////////////////////////////////////
+
+#include <unknwn.h> 
 #include <windows.h>
 
+//////////////////////////////////////////////////////////////////////
 
 class ClassFactory : public IClassFactory
 {
@@ -40,3 +29,5 @@ protected:
 private:
     long m_cRef;
 };
+
+//////////////////////////////////////////////////////////////////////

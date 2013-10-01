@@ -22,6 +22,7 @@
     <ProjectGuid>{3D1EDCCE-C4D7-4E77-9E1C-1A689D188A9A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CppShellExtContextMenuHandler</RootNamespace>
+    <ProjectName>RoboPaste</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -156,13 +157,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="GlobalExportFunctions.def" />
-    <None Include="OK.bmp" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClassFactory.h" />
     <ClInclude Include="FileContextMenuExt.h" />
-    <ClInclude Include="Log.h" />
     <ClInclude Include="Reg.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -183,7 +182,6 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="FileContextMenuExt.cpp" />
-    <ClCompile Include="Log.cpp" />
     <ClCompile Include="Reg.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -1,42 +1,20 @@
-/****************************** Module Header ******************************\
-Module Name:  dllmain.cpp
-Project:      CppShellExtContextMenuHandler
-Copyright (c) Microsoft Corporation.
-
-The file implements DllMain, and the DllGetClassObject, DllCanUnloadNow, 
-DllRegisterServer, DllUnregisterServer functions that are necessary for a COM 
-DLL. 
-
-DllGetClassObject invokes the class factory defined in ClassFactory.h/cpp and 
-queries to the specific interface.
-
-DllCanUnloadNow checks if we can unload the component from the memory.
-
-DllRegisterServer registers the COM server and the context menu handler in 
-the registry by invoking the helper functions defined in Reg.h/cpp. The 
-context menu handler is associated with the .cpp file class.
-
-DllUnregisterServer unregisters the COM server and the context menu handler. 
-
-This source is subject to the Microsoft Public License.
-See http://www.microsoft.com/opensource/licenses.mspx#Ms-PL.
-All other rights reserved.
-
-THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
-\***************************************************************************/
+//////////////////////////////////////////////////////////////////////
 
 #include <windows.h>
 #include <Guiddef.h>
-#include "ClassFactory.h"           // For the class factory
+#include "ClassFactory.h"
 #include "Reg.h"
-#include "Log.h"
+
+//////////////////////////////////////////////////////////////////////
 
 const CLSID CLSID_FileContextMenuExt = { 0x77ad0798, 0x84a3, 0x4e7a, { 0x93, 0xed, 0xf7, 0x05, 0xcd, 0xef, 0xc6, 0xa3 } };
 
+//////////////////////////////////////////////////////////////////////
+
 HINSTANCE   g_hInst     = NULL;
 long        g_cDllRef   = 0;
+
+//////////////////////////////////////////////////////////////////////
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 {
@@ -56,7 +34,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
 	return TRUE;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: DllGetClassObject
 //
@@ -90,7 +68,7 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppv)
     return hr;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: DllCanUnloadNow
 //
@@ -104,7 +82,7 @@ STDAPI DllCanUnloadNow(void)
     return g_cDllRef > 0 ? S_FALSE : S_OK;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: DllRegisterServer
 //
@@ -125,16 +103,13 @@ STDAPI DllRegisterServer(void)
     hr = RegisterInprocServer(szModule, CLSID_FileContextMenuExt, L"RoboPasteContextMenuHandler.FileContextMenuExt Class", L"Apartment");
     if (SUCCEEDED(hr))
     {
-        // Register the context menu handler. The context menu handler is 
-        // associated with the .cpp file class.
+        // Register the context menu handler
         hr = RegisterShellExtContextMenuHandler(CLSID_FileContextMenuExt, L"RoboPasteContextMenuHandler.FileContextMenuExt");
-		MessageBox(NULL, L"Registered!\n", L"RoboPaste", MB_ICONEXCLAMATION);
-		Log(L"Registered!\n");
     }
     return hr;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: DllUnregisterServer
 //
@@ -146,8 +121,6 @@ STDAPI DllUnregisterServer(void)
     if (SUCCEEDED(hr))
     {
         hr = UnregisterShellExtContextMenuHandler(CLSID_FileContextMenuExt);
-		Log(L"Unregistered!\n");
-		MessageBox(NULL, L"Unregistered!\n", L"RoboPaste", MB_ICONEXCLAMATION);
     }
 
     return hr;

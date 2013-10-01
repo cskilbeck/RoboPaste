@@ -1,31 +1,4 @@
-/****************************** Module Header ******************************\
-Module Name:  FileContextMenuExt.cpp
-Project:      CppShellExtContextMenuHandler
-Copyright (c) Microsoft Corporation.
-
-The code sample demonstrates creating a Shell context menu handler with C++. 
-
-A context menu handler is a shell extension handler that adds commands to an 
-existing context menu. Context menu handlers are associated with a particular 
-file class and are called any time a context menu is displayed for a member 
-of the class. While you can add items to a file class context menu with the 
-registry, the items will be the same for all members of the class. By 
-implementing and registering such a handler, you can dynamically add items to 
-an object's context menu, customized for the particular object.
-
-The example context menu handler adds the menu item "Display File Name (C++)"
-to the context menu when you right-click a .cpp file in the Windows Explorer. 
-Clicking the menu item brings up a message box that displays the full path 
-of the .cpp file.
-
-This source is subject to the Microsoft Public License.
-See http://www.microsoft.com/opensource/licenses.mspx#Ms-PL.
-All other rights reserved.
-
-THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
-\***************************************************************************/
+//////////////////////////////////////////////////////////////////////
 
 #include "FileContextMenuExt.h"
 #include "resource.h"
@@ -35,10 +8,14 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "winmm.lib")
 
+//////////////////////////////////////////////////////////////////////
+
 extern HINSTANCE g_hInst;
 extern long g_cDllRef;
 
 #define IDM_DISPLAY             0  // The command's identifier offset
+
+//////////////////////////////////////////////////////////////////////
 
 FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1), 
     m_pszMenuText(L"&RoboPaste"),
@@ -50,23 +27,16 @@ FileContextMenuExt::FileContextMenuExt(void) : m_cRef(1),
     m_pwszVerbHelpText(L"RoboPaste")
 {
     InterlockedIncrement(&g_cDllRef);
-
-    // Load the bitmap for the menu item. 
-    // If you want the menu item bitmap to be transparent, the color depth of 
-    // the bitmap must not be greater than 8bpp.
-    m_hMenuBmp = LoadImage(g_hInst, MAKEINTRESOURCE(IDB_OK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE | LR_LOADTRANSPARENT);
 }
+
+//////////////////////////////////////////////////////////////////////
 
 FileContextMenuExt::~FileContextMenuExt(void)
 {
-    if (m_hMenuBmp)
-    {
-        DeleteObject(m_hMenuBmp);
-        m_hMenuBmp = NULL;
-    }
-
     InterlockedDecrement(&g_cDllRef);
 }
+
+//////////////////////////////////////////////////////////////////////
 
 HHOOK hhk;
 
@@ -94,7 +64,7 @@ LRESULT CALLBACK CBTProc(INT nCode, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-int MsgBox(HWND hwnd, WCHAR const *msg, WCHAR const *yes, WCHAR const *no, WCHAR const *cancel = NULL)
+int CustomMessageBox(HWND hwnd, WCHAR const *msg, WCHAR const *yes, WCHAR const *no, WCHAR const *cancel = NULL)
 {
 	replacers[0] = yes;
 	replacers[1] = no;
@@ -102,6 +72,8 @@ int MsgBox(HWND hwnd, WCHAR const *msg, WCHAR const *yes, WCHAR const *no, WCHAR
 	hhk = SetWindowsHookEx(WH_CBT, &CBTProc, 0, GetCurrentThreadId());
 	return MessageBox(hwnd, msg, L"RoboPaste", (cancel == NULL) ? MB_YESNO : MB_YESNOCANCEL);
 }
+
+//////////////////////////////////////////////////////////////////////
 
 std::wstring Format(WCHAR const *fmt, ...)
 {
@@ -111,6 +83,8 @@ std::wstring Format(WCHAR const *fmt, ...)
 	_vsnwprintf_s(buf, ARRAYSIZE(buf), fmt, v);
 	return std::wstring(buf);
 }
+
+//////////////////////////////////////////////////////////////////////
 
 bool FileExists(TCHAR const * file)
 {
@@ -124,31 +98,108 @@ bool FileExists(TCHAR const * file)
 	return found;
 }
 
-void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
+//////////////////////////////////////////////////////////////////////
+
+std::vector<WCHAR> GetNonConstString(std::wstring str)
 {
+	std::vector<WCHAR> v(str.size());
+	for(auto c: str)
+	{
+		v.push_back(c);
+	}
+	return v;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+bool SplitPath(WCHAR const *fullPath, std::wstring &path, std::wstring &fileName)
+{
+	WCHAR drv[_MAX_DRIVE];
+	WCHAR pth[_MAX_DIR];
+	WCHAR fnm[_MAX_FNAME];
+	WCHAR ext[_MAX_EXT];
+
+	if(_wsplitpath_s(fullPath, drv, pth, fnm, ext) != 0)
+	{
+		return false;
+	}
+
+	std::wstring driveStr(drv);
+	std::wstring pathStr(pth);
+	if(pathStr[pathStr.size() - 1] == L'\\')
+	{
+		pathStr.pop_back();
+	}
+	std::wstring fileStr(fnm);
+	std::wstring extStr(ext);
+
+	path = driveStr + pathStr;
+	fileName = fileStr + extStr;
+
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void BrowseToFile(LPCTSTR filename)
+{
+	auto pidl = ILCreateFromPath(filename);
+	if(pidl)
+	{
+		SHOpenFolderAndSelectItems(pidl,0,0,0);
+		ILFree(pidl);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+
+std::vector<char> WideStringToAnsi(std::wstring str)
+{
+	std::vector<char> p;
+	int nch = WideCharToMultiByte(CP_ACP, 0, str.c_str(), (int)str.size(), NULL, 0, NULL, NULL);
+	if(nch < 32767)	// sanity
+	{
+		p.resize(nch);
+		WideCharToMultiByte(CP_ACP, 0, str.c_str(), (int)str.size(), &p[0], nch, NULL, NULL);
+	}
+	return p;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+int ShowError(HWND hWnd, WCHAR const *format, ...)
+{
+	va_list v;
+	va_start(v, format);
+	WCHAR buffer[8192];
+	_vsnwprintf_s(buffer, ARRAYSIZE(buffer), format, v);
+	return MessageBox(hWnd, buffer, L"RoboPaste", MB_ICONEXCLAMATION);
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FileContextMenuExt::OnRoboPaste(HWND hWnd)
+{
+	// Get %APPDATA%
 	WCHAR *personalFolder;
 	if(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &personalFolder) == S_OK)
 	{
-		std::wstring s(personalFolder);
-		s += L"\\RoboBatch";
+		std::wstring outputPath(personalFolder);
+		outputPath += L"\\RoboPaste";
 		CoTaskMemFree(personalFolder);
-		if(CreateDirectory(s.c_str(), NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS)
+
+		// Create RoboBatch folder there
+		if(CreateDirectory(outputPath.c_str(), NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS)
 		{
-			Log(L"Temp filename is ");
-			bool found = false;
-			std::wstring tfn;
+			// Create a new .bat file
+			std::wstring batchFilename;
 			int tries = 0;
-			HANDLE file;
-			bool fatal = false;
-			while(!found && ++tries < 100 && !fatal)
+			HANDLE file = INVALID_HANDLE_VALUE;
+			while(file == INVALID_HANDLE_VALUE && ++tries < 10)
 			{
-				tfn = Format(L"%s\\robo%08x.bat", s.c_str(), timeGetTime());
-				file = CreateFile(tfn.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-				if(file != INVALID_HANDLE_VALUE)
-				{
-					found = true;
-				}
-				else
+				batchFilename = Format(L"%s\\robo%08x.bat", outputPath.c_str(), timeGetTime());
+				file = CreateFile(batchFilename.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+				if(file == INVALID_HANDLE_VALUE)
 				{
 					if(GetLastError() == ERROR_ALREADY_EXISTS)
 					{
@@ -156,90 +207,78 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 					}
 					else
 					{
-						Log(L"Error creating file %s: %08x\n", tfn.c_str(), GetLastError());
 						break;
 					}
 				}
 			}
-			if(found)
+			if(file != INVALID_HANDLE_VALUE)
 			{
-				Log(L"%s\n", tfn.c_str());
+				// loop through all files scanned from the clipboard when the menu was shown
 				bool error = false;
-				for(int fn=0; fn<mFiles.size() && !error; ++fn)
+				for(int fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
 				{
-					std::wstring s = mFiles[fn];
-					DWORD wrote;
-					DWORD fileAttributes = GetFileAttributes(s.c_str());
+					// get file attributes
+					std::wstring inputFilename = mFiles[fileIndex];
+					DWORD fileAttributes = GetFileAttributes(inputFilename.c_str());
 					if(fileAttributes != INVALID_FILE_ATTRIBUTES)
 					{
+						// split filename into path and name
 						std::wstring batchLine;
+						std::wstring fullPath;
+						std::wstring fullName;
 
-						WCHAR drive[_MAX_DRIVE];
-						WCHAR path[_MAX_DIR];
-						WCHAR filename[_MAX_FNAME];
-						WCHAR ext[_MAX_EXT];
-						
-						_wsplitpath_s(s.c_str(), drive, path, filename, ext);
+						std::wstring makeDirCommand(L"mkdir");
+						std::wstring roboCommand(L"robocopy /NJH /NJS");
 
-						std::wstring driveStr(drive);
-						std::wstring pathStr(path);
-						if(pathStr[pathStr.size() - 1] == L'\\')
+						if(SplitPath(inputFilename.c_str(), fullPath, fullName))
 						{
-							pathStr.pop_back();
-						}
-						std::wstring fileStr(filename);
-						std::wstring extStr(ext);
+							// add commands to the batch file
+							bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
+							bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;
+							if(isFolder)
+							{
+								batchLine += Format(L"%s \"%s\\%s\"\r\n", makeDirCommand.c_str(), mDestinationPath.c_str(), fullName.c_str());
+								batchLine += Format(L"%s \"%s\" \"%s\\%s\" /E\r\n\r\n", roboCommand.c_str(), inputFilename.c_str(), mDestinationPath.c_str(), fullName.c_str());
+							}
+							else if(isCandidate)
+							{
+								batchLine += Format(L"%s \"%s\" \"%s\" \"%s\"\r\n\r\n", roboCommand.c_str(), fullPath.c_str(), mDestinationPath.c_str(), fullName.c_str());
+							}
+							else
+							{
+								batchLine += Format(L"REM skipped \"%s\"\r\n\r\n", inputFilename.c_str());
+							}
 
-						std::wstring fullPath = driveStr + pathStr;
-						std::wstring fullName = fileStr + extStr;
+							if(!batchLine.empty())
+							{
+								// make the line ansi
+								std::vector<char> mbc = WideStringToAnsi(batchLine);
 
-						Log(L"FullPath: %s\nFullName: %s\n", fullPath.c_str(), fullName.c_str());
-
-						bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
-						bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;
-						if(isFolder)
-						{
-							batchLine += Format(L"mkdir \"%s\\%s\"\r\n", mDestinationPath.c_str(), filename);
-							batchLine += Format(L"robocopy \"%s\" \"%s\\%s\" /E\r\n\r\n", s.c_str(), mDestinationPath.c_str(), filename);
-						}
-						else if(isCandidate)
-						{
-							batchLine += Format(L"robocopy \"%s\" \"%s\" \"%s\"\r\n\r\n", fullPath.c_str(), mDestinationPath.c_str(), fullName.c_str());
+								// write it to the batch file
+								DWORD wrote = 0;
+								if(!WriteFile(file, &mbc[0], (DWORD)mbc.size(), &wrote, NULL))
+								{
+									error = true;
+									MessageBox(hWnd, Format(L"Error writing to Robo batch file: %08x", batchFilename.c_str()).c_str(), L"RoboPaste", MB_ICONEXCLAMATION);
+									break;
+								}
+							}
 						}
 						else
 						{
-							batchLine += Format(L"REM skipped \"%s\"\r\n\r\n", s.c_str());
-						}
-
-						if(!batchLine.empty())
-						{
-							Log(L"Batchline: %s\n", batchLine.c_str());
-							int nch = WideCharToMultiByte(CP_ACP, 0, batchLine.c_str(), (int)batchLine.size(), NULL, 0, NULL, NULL);
-							Log(L"%d\n", nch);
-							std::vector<char> mbc;
-							mbc.resize(nch);
-							WideCharToMultiByte(CP_ACP, 0, batchLine.c_str(), (int)batchLine.size(), &mbc[0], (int)mbc.size(), NULL, NULL);
-
-							DWORD wrote = 0;
-							if(!WriteFile(file, &mbc[0], (DWORD)mbc.size(), &wrote, NULL))
-							{
-								error = true;
-								Log(L"Error %08x, wrote %d of %d\n", GetLastError(), wrote, mbc.size());
-								MessageBox(hWnd, L"Error writing to Robo batch file", L"RoboPaste", MB_ICONEXCLAMATION);
-								break;
-							}
+							ShowError(hWnd, L"Error parsing filename %s", inputFilename.c_str());
 						}
 					}
 					else
 					{
-						switch (MessageBox(hWnd, Format(L"Error getting file information for %s", s.c_str()).c_str(), L"RoboPaste", MB_ABORTRETRYIGNORE))
+						switch (MessageBox(hWnd, Format(L"Error getting file information for %s", inputFilename.c_str()).c_str(), L"RoboPaste", MB_ABORTRETRYIGNORE))
 						{
 						case IDABORT:
 							error = true;
 							break;
 							
 						case IDRETRY:
-							--fn;
+							--fileIndex;
 							break;
 
 						case IDIGNORE:
@@ -251,11 +290,11 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 
 				if(!error)
 				{
-					switch(MsgBox(hWnd, L"Created robo batch file! What do you want to do?", L"Run it", L"Cancel", L"Show it to me"))
+					switch(CustomMessageBox(hWnd, Format(L"Batch file %s created.", batchFilename.c_str()).c_str(), L"Run it", L"Cancel", L"Show in folder"))
 					{
 					case IDYES:
 						{
-							std::wstring params = Format(L"/Q /K %s", tfn.c_str());
+							std::wstring params = Format(L"/T:06 /Q /K %s", batchFilename.c_str());
 							SHELLEXECUTEINFO rSEI = { 0 };
 							rSEI.cbSize = sizeof( rSEI );
 							rSEI.lpVerb = L"open";
@@ -267,8 +306,7 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 
 							if(!ShellExecuteEx(&rSEI))
 							{
-								Log(L"Error creating process: GLE = %08x\n", GetLastError());
-								MessageBox(hWnd, L"Error executing batch file!", L"Robopaste", MB_ICONEXCLAMATION);
+								ShowError(hWnd, L"Error executing batch file (%08x)", GetLastError());
 							}
 						}
 						break;
@@ -277,40 +315,35 @@ void FileContextMenuExt::OnVerbDisplayFileName(HWND hWnd)
 						break;
 
 					case IDCANCEL:
-						{
-							HINSTANCE rc = ShellExecute(hWnd, L"edit", tfn.c_str(), NULL, NULL, SW_SHOW);
-							if((DWORD)rc <= 32)
-							{
-								Log(L"Error creating process: %08x, GLE = %08x\n", rc, GetLastError());
-							}
-						}
+						BrowseToFile(batchFilename.c_str());
 						break;
 					}
 				}
 			}
 			else
 			{
-				Log(L"Can't create file!\n");
-				MessageBox(hWnd, L"Error creating Robo batch file", L"RoboPaste", MB_ICONEXCLAMATION);
+				ShowError(hWnd, L"Error creating Robo batch file %s", batchFilename.c_str());
 			}
 		}
 		else
 		{
-			Log(L"CreateDirectory failed (%s): GLE: %08x\n", s.c_str(), GetLastError());
-			MessageBox(hWnd, L"Error creating RoboBatch folder (%s): %08x", L"RoboPaste", MB_ICONEXCLAMATION);
+			ShowError(hWnd, L"Error creating RoboBatch folder (%s): %08x", outputPath.c_str(), GetLastError());
 		}
 	}
 	else
 	{
-		MessageBox(hWnd, L"Error finding AppData folder", L"RoboPaste", MB_ICONEXCLAMATION);
+		ShowError(hWnd, L"Error finding AppData folder");
 	}
 
 }
 
+//////////////////////////////////////////////////////////////////////
 
 #pragma region IUnknown
 
+//////////////////////////////////////////////////////////////////////
 // Query to the interface the component supported.
+
 IFACEMETHODIMP FileContextMenuExt::QueryInterface(REFIID riid, void **ppv)
 {
     static const QITAB qit[] = 
@@ -322,13 +355,17 @@ IFACEMETHODIMP FileContextMenuExt::QueryInterface(REFIID riid, void **ppv)
     return QISearch(this, qit, riid, ppv);
 }
 
+//////////////////////////////////////////////////////////////////////
 // Increase the reference count for an interface on an object.
+
 IFACEMETHODIMP_(ULONG) FileContextMenuExt::AddRef()
 {
     return InterlockedIncrement(&m_cRef);
 }
 
+//////////////////////////////////////////////////////////////////////
 // Decrease the reference count for an interface on an object.
+
 IFACEMETHODIMP_(ULONG) FileContextMenuExt::Release()
 {
     ULONG cRef = InterlockedDecrement(&m_cRef);
@@ -342,10 +379,13 @@ IFACEMETHODIMP_(ULONG) FileContextMenuExt::Release()
 
 #pragma endregion
 
+//////////////////////////////////////////////////////////////////////
 
 #pragma region IShellExtInit
 
+//////////////////////////////////////////////////////////////////////
 // Initialize the context menu handler.
+
 IFACEMETHODIMP FileContextMenuExt::Initialize(LPCITEMIDLIST pidlFolder, LPDATAOBJECT pDataObj, HKEY hKeyProgID)
 {
 	if(pidlFolder == NULL)
@@ -361,20 +401,16 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(LPCITEMIDLIST pidlFolder, LPDATAOB
 	return ERROR_BAD_PATHNAME;
 }
 
+//////////////////////////////////////////////////////////////////////
+
 #pragma endregion
 
+//////////////////////////////////////////////////////////////////////
 
 #pragma region IContextMenu
 
-//
-//   FUNCTION: FileContextMenuExt::QueryContextMenu
-//
-//   PURPOSE: The Shell calls IContextMenu::QueryContextMenu to allow the 
-//            context menu handler to add its menu items to the menu. It 
-//            passes in the HMENU handle in the hmenu parameter. The 
-//            indexMenu parameter is set to the index to be used for the 
-//            first menu item that is to be added.
-//
+//////////////////////////////////////////////////////////////////////
+
 IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(HMENU hMenu, UINT indexMenu, UINT idCmdFirst, UINT idCmdLast, UINT uFlags)
 {
     // If uFlags include CMF_DEFAULTONLY then we should not do anything.
@@ -385,7 +421,7 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(HMENU hMenu, UINT indexMenu,
 
 	// Check the clipboard
 	// If it's got some filenames in it
-	// Enable the RoboPaste
+	// Enable the RoboPaste entry
 
 	mFiles.clear();
 
@@ -401,11 +437,9 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(HMENU hMenu, UINT indexMenu,
 		{
 			TCHAR path[MAX_PATH * 2];
 			UINT nFiles = DragQueryFile((HDROP)stgm.hGlobal, -1, NULL, 0);
-			Log(L"%d files\n", nFiles);
 			for(UINT i=0; i<nFiles; ++i)
 			{
 				DragQueryFile((HDROP)stgm.hGlobal, i, path, ARRAYSIZE(path));
-				Log(L"%s\n", path);
 				mFiles.push_back(path);
 			}
 		}
@@ -422,7 +456,7 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(HMENU hMenu, UINT indexMenu,
     mii.fType = MFT_STRING;
     mii.dwTypeData = m_pszMenuText;
     mii.fState = mFiles.empty() ? MFS_DISABLED : MFS_ENABLED;
-    mii.hbmpItem = static_cast<HBITMAP>(m_hMenuBmp);
+    mii.hbmpItem = NULL;
     if (!InsertMenuItem(hMenu, indexMenu, TRUE, &mii))
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -443,14 +477,8 @@ IFACEMETHODIMP FileContextMenuExt::QueryContextMenu(HMENU hMenu, UINT indexMenu,
     return MAKE_HRESULT(SEVERITY_SUCCESS, 0, USHORT(IDM_DISPLAY + 1));
 }
 
+//////////////////////////////////////////////////////////////////////
 
-//
-//   FUNCTION: FileContextMenuExt::InvokeCommand
-//
-//   PURPOSE: This method is called when a user clicks a menu item to tell 
-//            the handler to run the associated command. The lpcmi parameter 
-//            points to a structure that contains the needed information.
-//
 IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
 {
     BOOL fUnicode = FALSE;
@@ -487,7 +515,7 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // Is the verb supported by this context menu extension?
         if (StrCmpIA(pici->lpVerb, m_pszVerb) == 0)
         {
-            OnVerbDisplayFileName(pici->hwnd);
+            OnRoboPaste(pici->hwnd);
         }
         else
         {
@@ -505,7 +533,7 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // Is the verb supported by this context menu extension?
         if (StrCmpIW(((CMINVOKECOMMANDINFOEX*)pici)->lpVerbW, m_pwszVerb) == 0)
         {
-            OnVerbDisplayFileName(pici->hwnd);
+            OnRoboPaste(pici->hwnd);
         }
         else
         {
@@ -524,7 +552,7 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
         // extension?
         if (LOWORD(pici->lpVerb) == IDM_DISPLAY)
         {
-            OnVerbDisplayFileName(pici->hwnd);
+            OnRoboPaste(pici->hwnd);
         }
         else
         {
@@ -538,7 +566,7 @@ IFACEMETHODIMP FileContextMenuExt::InvokeCommand(LPCMINVOKECOMMANDINFO pici)
     return S_OK;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: CFileContextMenuExt::GetCommandString
 //
@@ -583,5 +611,7 @@ IFACEMETHODIMP FileContextMenuExt::GetCommandString(UINT_PTR idCommand, UINT uFl
 
     return hr;
 }
+
+//////////////////////////////////////////////////////////////////////
 
 #pragma endregion

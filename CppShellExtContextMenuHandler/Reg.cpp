@@ -170,8 +170,6 @@ HRESULT RegisterInprocServer(PCWSTR pszModule, const CLSID& clsid, PCWSTR pszFri
                 {
                     // Set the threading model of the component.
                     hr = SetHKCRRegistryKeyAndValue(szSubkey, L"ThreadingModel", pszThreadModel);
-
-					MessageBox(NULL, L"Created CLSID\\XXX", L"RegisterInprocServer", MB_ICONEXCLAMATION);
                 }
             }
         }
