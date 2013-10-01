@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*"
+           Name="RoboPaste"
+           Language="1033"
+           Version="1.0.0.0"
+           Manufacturer="HULA"
+           UpgradeCode="767d74c0-bd1a-46c8-800d-7f37609c9d1d">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>
+
+    <Media Id="1" Cabinet="robopaste.cab" EmbedCab="yes" />
+
+		<Feature Id="RoboPasteShellExtension" Title="RoboPaste Shell Extension" Level="1">
+			<ComponentGroupRef Id="ShellExtension" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder">
+				<Directory Id="INSTALLFOLDER" Name="RoboPaste" />
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ShellExtension" Directory="INSTALLFOLDER">
+			<Component Id="ShellExtensionDLL" Guid="{E5D0B183-209C-4368-955E-D6CF26A93391}" Win64="yes">
+				<File Id="RoboDLL" Source="..\x64\Release\RoboPaste.dll" KeyPath="yes" Vital="yes" />
+			</Component>
+		</ComponentGroup>
+
+    <CustomAction Id="RegisterDLL"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand='regsvr32.exe /s "[INSTALLFOLDER]robopaste.dll"'
+                  Return="check"
+                  Execute="deferred"
+                  Impersonate="no">
+    </CustomAction>
+
+    <CustomAction Id="UnregisterDLL"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand='regsvr32.exe /s /u "[INSTALLFOLDER]robopaste.dll"'
+                  Execute="deferred" 
+                  Impersonate="no">
+    </CustomAction>
+
+    <InstallExecuteSequence>
+      <Custom Action="RegisterDLL" Before="InstallFinalize">NOT Installed</Custom>
+      <Custom Action="UnregisterDLL" After="InstallInitialize">Installed</Custom>
+    </InstallExecuteSequence>
+    
+  </Fragment>
+
+</Wix>
