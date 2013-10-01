@@ -42,9 +42,9 @@ HHOOK hhk;
 
 std::wstring replacers[3] =
 {
-	std::wstring(L"Yes!!"),
-	std::wstring(L"No!!"),
-	std::wstring(L"Cancel!!")
+	std::wstring(L"Yes"),
+	std::wstring(L"No"),
+	std::wstring(L"Cancel")
 };
 
 LRESULT CALLBACK CBTProc(INT nCode, WPARAM wParam, LPARAM lParam)

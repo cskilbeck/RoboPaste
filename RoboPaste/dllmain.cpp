@@ -2,7 +2,7 @@
 
 #include <windows.h>
 #include <Guiddef.h>
-#include "ClassFactory.h"
+#include "ClassFactory.h" 
 #include "Reg.h"
 
 //////////////////////////////////////////////////////////////////////

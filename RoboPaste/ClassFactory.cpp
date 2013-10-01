@@ -1,18 +1,4 @@
-/****************************** Module Header ******************************\
-Module Name:  ClassFactory.cpp
-Project:      CppShellExtContextMenuHandler
-Copyright (c) Microsoft Corporation.
-
-The file implements the class factory for the FileContextMenuExt COM class. 
-
-This source is subject to the Microsoft Public License.
-See http://www.microsoft.com/opensource/licenses.mspx#Ms-PL.
-All other rights reserved.
-
-THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, 
-EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
-\***************************************************************************/
+//////////////////////////////////////////////////////////////////////
 
 #include "ClassFactory.h"
 #include "FileContextMenuExt.h"
@@ -20,21 +6,25 @@ WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <Shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
+//////////////////////////////////////////////////////////////////////
 
 extern long g_cDllRef;
 
+//////////////////////////////////////////////////////////////////////
 
 ClassFactory::ClassFactory() : m_cRef(1)
 {
     InterlockedIncrement(&g_cDllRef);
 }
 
+//////////////////////////////////////////////////////////////////////
+
 ClassFactory::~ClassFactory()
 {
     InterlockedDecrement(&g_cDllRef);
 }
 
-
+//////////////////////////////////////////////////////////////////////
 //
 // IUnknown
 //
@@ -49,10 +39,14 @@ IFACEMETHODIMP ClassFactory::QueryInterface(REFIID riid, void **ppv)
     return QISearch(this, qit, riid, ppv);
 }
 
+//////////////////////////////////////////////////////////////////////
+
 IFACEMETHODIMP_(ULONG) ClassFactory::AddRef()
 {
     return InterlockedIncrement(&m_cRef);
 }
+
+//////////////////////////////////////////////////////////////////////
 
 IFACEMETHODIMP_(ULONG) ClassFactory::Release()
 {
@@ -64,7 +58,7 @@ IFACEMETHODIMP_(ULONG) ClassFactory::Release()
     return cRef;
 }
 
-
+//////////////////////////////////////////////////////////////////////
 // 
 // IClassFactory
 //
@@ -90,6 +84,8 @@ IFACEMETHODIMP ClassFactory::CreateInstance(IUnknown *pUnkOuter, REFIID riid, vo
 
     return hr;
 }
+
+//////////////////////////////////////////////////////////////////////
 
 IFACEMETHODIMP ClassFactory::LockServer(BOOL fLock)
 {

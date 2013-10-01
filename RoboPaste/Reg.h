@@ -36,6 +36,7 @@
 //
 HRESULT RegisterInprocServer(PCWSTR pszModule, const CLSID& clsid,  PCWSTR pszFriendlyName, PCWSTR pszThreadModel);
 
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: UnregisterInprocServer
 //
@@ -48,7 +49,7 @@ HRESULT RegisterInprocServer(PCWSTR pszModule, const CLSID& clsid,  PCWSTR pszFr
 //
 HRESULT UnregisterInprocServer(const CLSID& clsid);
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: RegisterShellExtContextMenuHandler
 //
@@ -60,7 +61,7 @@ HRESULT UnregisterInprocServer(const CLSID& clsid);
 //
 HRESULT RegisterShellExtContextMenuHandler(const CLSID& clsid, PCWSTR pszFriendlyName);
 
-
+//////////////////////////////////////////////////////////////////////
 //
 //   FUNCTION: UnregisterShellExtContextMenuHandler
 //
