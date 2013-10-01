@@ -217,7 +217,6 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 				bool error = false;
 				for(size_t fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
 				{
-					// get file attributes
 					std::wstring inputFilename = mFiles[fileIndex];
 					DWORD fileAttributes = GetFileAttributes(inputFilename.c_str());
 					if(fileAttributes != INVALID_FILE_ATTRIBUTES)
@@ -227,11 +226,11 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 						std::wstring fullPath;
 						std::wstring fullName;
 
-						std::wstring makeDirCommand(L"mkdir");
-						std::wstring roboCommand(L"robocopy /NJH /NJS");
-
 						if(SplitPath(inputFilename.c_str(), fullPath, fullName))
 						{
+							std::wstring makeDirCommand(L"mkdir");
+							std::wstring roboCommand(L"robocopy /NJH /NJS /MT");
+
 							// add commands to the batch file
 							bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
 							bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;
