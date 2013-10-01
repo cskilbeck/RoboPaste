@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////////////
 
+#include <string>
 #include "Reg.h"
 #include <strsafe.h>
 
@@ -252,4 +253,31 @@ HRESULT UnregisterShellExtContextMenuHandler(const CLSID& clsid)
     }
 
     return hr;
+}
+
+std::wstring GetRegistryValue(WCHAR const *name, WCHAR const *defaultValue)
+{
+	HRESULT hr;
+	HKEY hKey = NULL;
+
+	std::wstring s(defaultValue);
+
+	// Try to open the specified registry key. 
+	hr = HRESULT_FROM_WIN32(RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\RoboPaste", 0, KEY_READ, &hKey));
+
+	if(SUCCEEDED(hr))
+	{
+		WCHAR buffer[1024];
+		ZeroMemory(buffer, sizeof(buffer));
+		DWORD cbData = ARRAYSIZE(buffer);
+		// Get the data for the specified value name.
+		hr = HRESULT_FROM_WIN32(RegQueryValueEx(hKey, name, NULL, NULL, (LPBYTE)buffer, &cbData));
+
+		if(SUCCEEDED(hr))
+		{
+			s = buffer;
+		}
+		RegCloseKey(hKey);
+	}
+	return s;
 }

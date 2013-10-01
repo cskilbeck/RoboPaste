@@ -7,6 +7,7 @@
 #include <Mmsystem.h>
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "winmm.lib")
+#include "Reg.h"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -213,6 +214,9 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 			}
 			if(file != INVALID_HANDLE_VALUE)
 			{
+				std::wstring makeDirCommand(L"mkdir");
+				std::wstring roboCommand = std::wstring(L"robocopy ") + GetRegistryValue(L"parameters", L"/NJH /NJS /MT /Z");
+
 				// loop through all files scanned from the clipboard when the menu was shown
 				bool error = false;
 				for(size_t fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
@@ -228,9 +232,6 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 
 						if(SplitPath(inputFilename.c_str(), fullPath, fullName))
 						{
-							std::wstring makeDirCommand(L"mkdir");
-							std::wstring roboCommand(L"robocopy /NJH /NJS /MT");
-
 							// add commands to the batch file
 							bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
 							bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;

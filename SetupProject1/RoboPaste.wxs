@@ -42,6 +42,7 @@
                   Directory="INSTALLFOLDER"
                   ExeCommand='regsvr32.exe /s /u "[INSTALLFOLDER]robopaste.dll"'
                   Execute="deferred" 
+                  Return="check"
                   Impersonate="no">
     </CustomAction>
 

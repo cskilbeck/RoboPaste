@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <Guiddef.h>
 #include "ClassFactory.h" 
+#include <string>
 #include "Reg.h"
 
 //////////////////////////////////////////////////////////////////////

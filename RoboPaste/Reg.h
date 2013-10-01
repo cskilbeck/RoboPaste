@@ -74,3 +74,5 @@ HRESULT RegisterShellExtContextMenuHandler(const CLSID& clsid, PCWSTR pszFriendl
 //   HKCR\<File Type>\shellex\ContextMenuHandlers in the registry.
 //
 HRESULT UnregisterShellExtContextMenuHandler(const CLSID& clsid);
+
+std::wstring GetRegistryValue(WCHAR const *name, WCHAR const *defaultValue);
