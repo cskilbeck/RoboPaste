@@ -38,6 +38,9 @@ private:
 
     // The method that handles the "display" verb.
     void OnRoboPaste(HWND hWnd);
+	std::vector<std::string> ScanFiles(HWND hWnd, std::wstring mkdirCommand, std::wstring robocopyCommand);
+	bool WriteBatchFile(HWND hWnd, std::vector<std::string> lines, std::wstring &batchFilename);
+	void ExecuteBatchFile(HWND hWnd, std::wstring batchFilename);
 
 	std::wstring mDestinationPath;
 	std::vector<std::wstring> mFiles;

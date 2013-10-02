@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RoboPaste", "RoboPaste\RoboPaste.vcxproj", "{3D1EDCCE-C4D7-4E77-9E1C-1A689D188A9A}"
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "SetupProject", "SetupProject1\SetupProject.wixproj", "{85FA055D-00C5-4333-9904-6259C70CEAB0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3D1EDCCE-C4D7-4E77-9E1C-1A689D188A9A} = {3D1EDCCE-C4D7-4E77-9E1C-1A689D188A9A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

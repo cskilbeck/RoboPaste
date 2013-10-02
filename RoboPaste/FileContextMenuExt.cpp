@@ -5,6 +5,7 @@
 #include <strsafe.h>
 #include <Shlwapi.h>
 #include <Mmsystem.h>
+#include <ctime>
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "winmm.lib")
 #include "Reg.h"
@@ -15,6 +16,8 @@ extern HINSTANCE g_hInst;
 extern long g_cDllRef;
 
 #define IDM_DISPLAY             0  // The command's identifier offset
+
+static HHOOK customMessageBoxHook;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -39,44 +42,46 @@ FileContextMenuExt::~FileContextMenuExt(void)
 
 //////////////////////////////////////////////////////////////////////
 
-HHOOK hhk;
-
-std::wstring replacers[3] =
+static std::wstring CustomMessageBoxStrings[3] =
 {
 	std::wstring(L"Yes"),
 	std::wstring(L"No"),
 	std::wstring(L"Cancel")
 };
 
-LRESULT CALLBACK CBTProc(INT nCode, WPARAM wParam, LPARAM lParam)
+//////////////////////////////////////////////////////////////////////
+
+LRESULT CALLBACK CustomMessageBoxHookProc(INT nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (nCode == HCBT_ACTIVATE)
 	{
 		HWND h = (HWND)wParam;
-		SetDlgItemText(h, IDYES, replacers[0].c_str());
-		SetDlgItemText(h, IDNO, replacers[1].c_str());
-		SetDlgItemText(h, IDCANCEL, replacers[2].c_str());
-		UnhookWindowsHookEx(hhk);
+		SetDlgItemText(h, IDYES, CustomMessageBoxStrings[0].c_str());
+		SetDlgItemText(h, IDNO, CustomMessageBoxStrings[1].c_str());
+		SetDlgItemText(h, IDCANCEL, CustomMessageBoxStrings[2].c_str());
+		UnhookWindowsHookEx(customMessageBoxHook);
 	}
 	else
 	{
-		CallNextHookEx(hhk, nCode, wParam, lParam);
+		CallNextHookEx(customMessageBoxHook, nCode, wParam, lParam);
 	}
 	return 0;
 }
 
-int CustomMessageBox(HWND hwnd, WCHAR const *msg, WCHAR const *yes, WCHAR const *no, WCHAR const *cancel = NULL)
+//////////////////////////////////////////////////////////////////////
+
+static int CustomMessageBox(HWND hwnd, WCHAR const *msg, WCHAR const *yes, WCHAR const *no, WCHAR const *cancel = NULL)
 {
-	replacers[0] = yes;
-	replacers[1] = no;
-	replacers[2] = (cancel == NULL) ? L"" : cancel;
-	hhk = SetWindowsHookEx(WH_CBT, &CBTProc, 0, GetCurrentThreadId());
+	CustomMessageBoxStrings[0] = yes;
+	CustomMessageBoxStrings[1] = no;
+	CustomMessageBoxStrings[2] = (cancel == NULL) ? L"" : cancel;
+	customMessageBoxHook = SetWindowsHookEx(WH_CBT, &CustomMessageBoxHookProc, 0, GetCurrentThreadId());
 	return MessageBox(hwnd, msg, L"RoboPaste", (cancel == NULL) ? MB_YESNO : MB_YESNOCANCEL);
 }
 
 //////////////////////////////////////////////////////////////////////
 
-std::wstring Format(WCHAR const *fmt, ...)
+static std::wstring Format(WCHAR const *fmt, ...)
 {
 	WCHAR buf[1024];
 	va_list v;
@@ -87,33 +92,7 @@ std::wstring Format(WCHAR const *fmt, ...)
 
 //////////////////////////////////////////////////////////////////////
 
-bool FileExists(TCHAR const * file)
-{
-	WIN32_FIND_DATA FindFileData;
-	HANDLE handle = FindFirstFile(file, &FindFileData) ;
-	bool found = handle != INVALID_HANDLE_VALUE;
-	if(found) 
-	{
-		FindClose(handle);
-	}
-	return found;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-std::vector<WCHAR> GetNonConstString(std::wstring str)
-{
-	std::vector<WCHAR> v(str.size());
-	for(auto c: str)
-	{
-		v.push_back(c);
-	}
-	return v;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-bool SplitPath(WCHAR const *fullPath, std::wstring &path, std::wstring &fileName)
+static bool SplitPath(WCHAR const *fullPath, std::wstring &path, std::wstring &fileName)
 {
 	WCHAR drv[_MAX_DRIVE];
 	WCHAR pth[_MAX_DIR];
@@ -127,12 +106,13 @@ bool SplitPath(WCHAR const *fullPath, std::wstring &path, std::wstring &fileName
 
 	std::wstring driveStr(drv);
 	std::wstring pathStr(pth);
+	std::wstring fileStr(fnm);
+	std::wstring extStr(ext);
+
 	if(pathStr[pathStr.size() - 1] == L'\\')
 	{
 		pathStr.pop_back();
 	}
-	std::wstring fileStr(fnm);
-	std::wstring extStr(ext);
 
 	path = driveStr + pathStr;
 	fileName = fileStr + extStr;
@@ -154,16 +134,18 @@ void BrowseToFile(LPCTSTR filename)
 
 //////////////////////////////////////////////////////////////////////
 
-std::vector<char> WideStringToAnsi(std::wstring str)
+std::string WideStringToAnsiString(std::wstring str)
 {
-	std::vector<char> p;
+	std::string s;
 	int nch = WideCharToMultiByte(CP_ACP, 0, str.c_str(), (int)str.size(), NULL, 0, NULL, NULL);
 	if(nch < 32767)	// sanity
 	{
-		p.resize(nch);
+		std::vector<char> p((size_t)nch);
 		WideCharToMultiByte(CP_ACP, 0, str.c_str(), (int)str.size(), &p[0], nch, NULL, NULL);
+		p.push_back(0);
+		s = std::string(&p[0]);
 	}
-	return p;
+	return s;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -179,8 +161,124 @@ int ShowError(HWND hWnd, WCHAR const *format, ...)
 
 //////////////////////////////////////////////////////////////////////
 
-void FileContextMenuExt::OnRoboPaste(HWND hWnd)
+std::string GetDateTime()
 {
+	time_t rawtime;
+	time(&rawtime);
+
+	tm timeinfo;
+	localtime_s(&timeinfo, &rawtime);
+
+	char buffer[80];
+	strftime(buffer, ARRAYSIZE(buffer), "%Y-%m-%d-%H-%M-%S", &timeinfo);
+	return buffer;
+}
+
+//////////////////////////////////////////////////////////////////////
+// build the batch file as strings
+
+std::vector<std::string> FileContextMenuExt::ScanFiles(HWND hWnd, std::wstring mkdirCommand, std::wstring robocopyCommand)
+{
+	std::vector<std::string> miscLines;
+	std::vector<std::string> mkdirLines;
+	std::vector<std::string> folderLines;
+	std::vector<std::string> fileLines;
+
+	std::wstring currentFileLine;
+	int fileCount = 0;
+
+	miscLines.push_back(std::string("REM RoboPaste batch file created ") + GetDateTime() + "\r\n");
+
+	bool error = false;
+
+	for(size_t fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
+	{
+		std::wstring inputFilename = mFiles[fileIndex];
+		DWORD fileAttributes = GetFileAttributes(inputFilename.c_str());
+		if(fileAttributes != INVALID_FILE_ATTRIBUTES)
+		{
+			// split filename into path and name
+			std::wstring fullPath;
+			std::wstring fullName;
+
+			if(SplitPath(inputFilename.c_str(), fullPath, fullName))
+			{
+				// add commands to the batch file
+				bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
+				bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;
+				if(isFolder)
+				{
+					mkdirLines.push_back(WideStringToAnsiString(Format(L"%s \"%s\\%s\"\r\n", mkdirCommand.c_str(), mDestinationPath.c_str(), fullName.c_str())));
+					folderLines.push_back(WideStringToAnsiString(Format(L"%s \"%s\" \"%s\\%s\" /E\r\n", robocopyCommand.c_str(), inputFilename.c_str(), mDestinationPath.c_str(), fullName.c_str())));
+				}
+				else if(isCandidate)
+				{
+					if(currentFileLine.empty())
+					{
+						currentFileLine = Format(L"%s \"%s\" \"%s\" \"%s\"", robocopyCommand.c_str(), fullPath.c_str(), mDestinationPath.c_str(), fullName.c_str());
+					}
+					else
+					{
+						currentFileLine += std::wstring(L" \"") + fullName.c_str() + L"\"";
+					}
+					++fileCount;
+					if((fileCount % 8) == 0)
+					{
+						currentFileLine += L"\r\n";
+						fileLines.push_back(WideStringToAnsiString(currentFileLine));
+						currentFileLine.clear();
+					}
+				}
+				else
+				{
+					miscLines.push_back(WideStringToAnsiString(Format(L"REM skipped \"%s\"\r\n", inputFilename.c_str())));
+				}
+			}
+			else
+			{
+				ShowError(hWnd, L"Error parsing filename %s", inputFilename.c_str());
+			}
+		}
+		else
+		{
+			switch (MessageBox(hWnd, Format(L"Error getting file information for %s", inputFilename.c_str()).c_str(), L"RoboPaste", MB_ABORTRETRYIGNORE))
+			{
+			case IDABORT:
+				error = true;
+				break;
+
+			case IDRETRY:
+				--fileIndex;
+				break;
+
+			case IDIGNORE:
+				break;
+			};
+		}
+	}
+	if(!currentFileLine.empty())
+	{
+		fileLines.push_back(WideStringToAnsiString(currentFileLine));
+	}
+
+	std::vector<std::string> allLines;
+	allLines.reserve(folderLines.size() + fileLines.size());
+	allLines.insert(allLines.end(), miscLines.begin(), miscLines.end());
+	allLines.push_back("\r\n");
+	allLines.insert(allLines.end(), mkdirLines.begin(), mkdirLines.end());
+	allLines.push_back("\r\n");
+	allLines.insert(allLines.end(), folderLines.begin(), folderLines.end());
+	allLines.push_back("\r\n");
+	allLines.insert(allLines.end(), fileLines.begin(), fileLines.end());
+	return allLines;
+}
+
+//////////////////////////////////////////////////////////////////////
+
+bool FileContextMenuExt::WriteBatchFile(HWND hWnd, std::vector<std::string> lines, std::wstring &batchFilename)
+{
+	bool rc = false;
+
 	// Get %APPDATA%
 	WCHAR *personalFolder;
 	if(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &personalFolder) == S_OK)
@@ -193,7 +291,6 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 		if(CreateDirectory(outputPath.c_str(), NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS)
 		{
 			// Create a new .bat file
-			std::wstring batchFilename;
 			int tries = 0;
 			HANDLE file = INVALID_HANDLE_VALUE;
 			while(file == INVALID_HANDLE_VALUE && ++tries < 10)
@@ -214,111 +311,21 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 			}
 			if(file != INVALID_HANDLE_VALUE)
 			{
-				std::wstring makeDirCommand(L"mkdir");
-				std::wstring roboCommand = std::wstring(L"robocopy ") + GetRegistryValue(L"parameters", L"/NJH /NJS /MT /Z");
-
-				// loop through all files scanned from the clipboard when the menu was shown
+				// save the lines into the batch file
 				bool error = false;
-				for(size_t fileIndex=0; fileIndex<mFiles.size() && !error; ++fileIndex)
+				for(auto line: lines)
 				{
-					std::wstring inputFilename = mFiles[fileIndex];
-					DWORD fileAttributes = GetFileAttributes(inputFilename.c_str());
-					if(fileAttributes != INVALID_FILE_ATTRIBUTES)
+					// write it to the batch file
+					DWORD wrote = 0;
+					if(!WriteFile(file, line.c_str(), (DWORD)line.size(), &wrote, NULL))
 					{
-						// split filename into path and name
-						std::wstring batchLine;
-						std::wstring fullPath;
-						std::wstring fullName;
-
-						if(SplitPath(inputFilename.c_str(), fullPath, fullName))
-						{
-							// add commands to the batch file
-							bool isCandidate = (fileAttributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_OFFLINE)) == 0;
-							bool isFolder = (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && isCandidate;
-							if(isFolder)
-							{
-								batchLine += Format(L"%s \"%s\\%s\"\r\n", makeDirCommand.c_str(), mDestinationPath.c_str(), fullName.c_str());
-								batchLine += Format(L"%s \"%s\" \"%s\\%s\" /E\r\n\r\n", roboCommand.c_str(), inputFilename.c_str(), mDestinationPath.c_str(), fullName.c_str());
-							}
-							else if(isCandidate)
-							{
-								batchLine += Format(L"%s \"%s\" \"%s\" \"%s\"\r\n\r\n", roboCommand.c_str(), fullPath.c_str(), mDestinationPath.c_str(), fullName.c_str());
-							}
-							else
-							{
-								batchLine += Format(L"REM skipped \"%s\"\r\n\r\n", inputFilename.c_str());
-							}
-
-							if(!batchLine.empty())
-							{
-								// make the line ansi
-								std::vector<char> mbc = WideStringToAnsi(batchLine);
-
-								// write it to the batch file
-								DWORD wrote = 0;
-								if(!WriteFile(file, &mbc[0], (DWORD)mbc.size(), &wrote, NULL))
-								{
-									error = true;
-									MessageBox(hWnd, Format(L"Error writing to Robo batch file: %08x", batchFilename.c_str()).c_str(), L"RoboPaste", MB_ICONEXCLAMATION);
-									break;
-								}
-							}
-						}
-						else
-						{
-							ShowError(hWnd, L"Error parsing filename %s", inputFilename.c_str());
-						}
-					}
-					else
-					{
-						switch (MessageBox(hWnd, Format(L"Error getting file information for %s", inputFilename.c_str()).c_str(), L"RoboPaste", MB_ABORTRETRYIGNORE))
-						{
-						case IDABORT:
-							error = true;
-							break;
-							
-						case IDRETRY:
-							--fileIndex;
-							break;
-
-						case IDIGNORE:
-							break;
-						};
+						ShowError(hWnd, L"Error writing to Robo batch file: %08x", batchFilename.c_str());
+						error = true;
+						break;
 					}
 				}
 				CloseHandle(file);
-
-				if(!error)
-				{
-					switch(CustomMessageBox(hWnd, Format(L"Batch file %s created.", batchFilename.c_str()).c_str(), L"Run it", L"Cancel", L"Show in folder"))
-					{
-					case IDYES:
-						{
-							std::wstring params = Format(L"/T:06 /Q /K %s", batchFilename.c_str());
-							SHELLEXECUTEINFO rSEI = { 0 };
-							rSEI.cbSize = sizeof( rSEI );
-							rSEI.lpVerb = L"open";
-							rSEI.lpFile = L"cmd.Exe";
-							rSEI.lpParameters = params.c_str();
-							rSEI.lpDirectory = mDestinationPath.c_str();
-							rSEI.nShow = SW_NORMAL;
-							rSEI.fMask = SEE_MASK_NOCLOSEPROCESS;
-
-							if(!ShellExecuteEx(&rSEI))
-							{
-								ShowError(hWnd, L"Error executing batch file (%08x)", GetLastError());
-							}
-						}
-						break;
-
-					case IDNO:
-						break;
-
-					case IDCANCEL:
-						BrowseToFile(batchFilename.c_str());
-						break;
-					}
-				}
+				rc = !error;
 			}
 			else
 			{
@@ -327,14 +334,68 @@ void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 		}
 		else
 		{
-			ShowError(hWnd, L"Error creating RoboBatch folder (%s): %08x", outputPath.c_str(), GetLastError());
+			ShowError(hWnd, L"Error creating Robo batch folder %s", outputPath.c_str());
 		}
 	}
 	else
 	{
 		ShowError(hWnd, L"Error finding AppData folder");
 	}
+	return rc;
+}
 
+//////////////////////////////////////////////////////////////////////
+
+void FileContextMenuExt::ExecuteBatchFile(HWND hWnd, std::wstring batchFilename)
+{
+	std::wstring params = Format(L"/T:06 /Q /K %s", batchFilename.c_str());
+	SHELLEXECUTEINFO rSEI = { 0 };
+	rSEI.cbSize = sizeof( rSEI );
+	rSEI.lpVerb = L"open";
+	rSEI.lpFile = L"cmd.Exe";
+	rSEI.lpParameters = params.c_str();
+	rSEI.lpDirectory = mDestinationPath.c_str();
+	rSEI.nShow = SW_NORMAL;
+	rSEI.fMask = SEE_MASK_NOCLOSEPROCESS;
+	if(!ShellExecuteEx(&rSEI))
+	{
+		ShowError(hWnd, L"Error executing batch file (%08x)", GetLastError());
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+
+void FileContextMenuExt::OnRoboPaste(HWND hWnd)
+{
+	std::wstring makeDirCommand(L"mkdir");
+	std::wstring roboCommand = std::wstring(L"robocopy ") + GetRegistryValue(L"parameters", L"/NJH /NJS /MT /Z");
+
+	std::vector<std::string> lines = ScanFiles(hWnd, makeDirCommand, roboCommand);
+
+	if(!lines.empty())
+	{
+		std::wstring batchFilename;
+		if(WriteBatchFile(hWnd, lines, batchFilename))
+		{
+			switch(CustomMessageBox(hWnd, Format(L"Batch file %s created.", batchFilename.c_str()).c_str(), L"Run it", L"Cancel", L"Show in folder"))
+			{
+			case IDYES:
+				ExecuteBatchFile(hWnd, batchFilename);
+				break;
+
+			case IDNO:
+				break;
+
+			case IDCANCEL:
+				BrowseToFile(batchFilename.c_str());
+				break;
+			}
+		}
+	}
+	else
+	{
+		ShowError(hWnd, L"No valid files/folders to transfer");
+	}
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -396,7 +457,14 @@ IFACEMETHODIMP FileContextMenuExt::Initialize(LPCITEMIDLIST pidlFolder, LPDATAOB
 	if(SHGetPathFromIDList(pidlFolder, path))
 	{
 		mDestinationPath = path;
-		return S_OK;
+		if(mDestinationPath.empty())
+		{
+			return ERROR_BAD_PATHNAME;
+		}
+		else
+		{
+			return S_OK;
+		}
 	}
 	return ERROR_BAD_PATHNAME;
 }
