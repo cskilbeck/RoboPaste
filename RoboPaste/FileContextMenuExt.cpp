@@ -262,14 +262,18 @@ std::vector<std::string> FileContextMenuExt::ScanFiles(HWND hWnd, std::wstring m
 	}
 
 	std::vector<std::string> allLines;
-	allLines.reserve(folderLines.size() + fileLines.size());
+
 	allLines.insert(allLines.end(), miscLines.begin(), miscLines.end());
 	allLines.push_back("\r\n");
+
 	allLines.insert(allLines.end(), mkdirLines.begin(), mkdirLines.end());
 	allLines.push_back("\r\n");
+
 	allLines.insert(allLines.end(), folderLines.begin(), folderLines.end());
 	allLines.push_back("\r\n");
+
 	allLines.insert(allLines.end(), fileLines.begin(), fileLines.end());
+
 	return allLines;
 }
 
@@ -368,7 +372,7 @@ void FileContextMenuExt::ExecuteBatchFile(HWND hWnd, std::wstring batchFilename)
 void FileContextMenuExt::OnRoboPaste(HWND hWnd)
 {
 	std::wstring makeDirCommand(L"mkdir");
-	std::wstring roboCommand = std::wstring(L"robocopy ") + GetRegistryValue(L"parameters", L"/NJH /NJS /MT /Z");
+	std::wstring roboCommand = std::wstring(L"robocopy ") + GetRegistryValue(L"parameters", L"/NJH /NJS /MT");
 
 	std::vector<std::string> lines = ScanFiles(hWnd, makeDirCommand, roboCommand);
 
