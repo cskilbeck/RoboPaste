@@ -279,18 +279,29 @@ std::vector<std::string> FileContextMenuExt::ScanFiles(HWND hWnd, std::wstring m
 
 //////////////////////////////////////////////////////////////////////
 
+std::wstring GetRobopasteFolder()
+{
+	std::wstring outputPath;
+	WCHAR *personalFolder;
+	if(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &personalFolder) == S_OK)
+	{
+		outputPath = personalFolder;
+		outputPath += L"\\RoboPaste";
+		CoTaskMemFree(personalFolder);
+	}
+	return outputPath;
+}
+
+//////////////////////////////////////////////////////////////////////
+
 bool FileContextMenuExt::WriteBatchFile(HWND hWnd, std::vector<std::string> lines, std::wstring &batchFilename)
 {
 	bool rc = false;
 
-	// Get %APPDATA%
-	WCHAR *personalFolder;
-	if(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &personalFolder) == S_OK)
-	{
-		std::wstring outputPath(personalFolder);
-		outputPath += L"\\RoboPaste";
-		CoTaskMemFree(personalFolder);
+	std::wstring outputPath = GetRobopasteFolder();
 
+	if(!outputPath.empty())
+	{
 		// Create RoboBatch folder there
 		if(CreateDirectory(outputPath.c_str(), NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS)
 		{
@@ -358,7 +369,7 @@ void FileContextMenuExt::ExecuteBatchFile(HWND hWnd, std::wstring batchFilename)
 	rSEI.lpVerb = L"open";
 	rSEI.lpFile = L"cmd.Exe";
 	rSEI.lpParameters = params.c_str();
-	rSEI.lpDirectory = mDestinationPath.c_str();
+	rSEI.lpDirectory = GetRobopasteFolder().c_str();
 	rSEI.nShow = SW_NORMAL;
 	rSEI.fMask = SEE_MASK_NOCLOSEPROCESS;
 	if(!ShellExecuteEx(&rSEI))
