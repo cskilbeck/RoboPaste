@@ -5,7 +5,7 @@
 	<Product Id="*"
            Name="RoboPaste"
            Language="1033"
-           Version="1.0.0.2"
+           Version="1.0.0.3"
            Manufacturer="HULA"
            UpgradeCode="767d74c0-bd1a-46c8-800d-7f37609c9d1d">
     
